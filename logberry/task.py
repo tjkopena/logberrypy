@@ -5,25 +5,14 @@ import asyncio
 import threading
 import janus
 
-from printer import Printer
-from event import Event
+from .printer import Printer
+from .event import Event
 
-class Exception(Exception):
-    def __init__(self, msg='Exception',  **kwargs):
-        self.identifiers = kwargs
-        super().__init__(msg)
-
-    def __str__(self):
-        d=''
-        for k,v in self.identifiers.items():
-            if any(c in k for c in string.whitespace):
-                k = f'"{k}"'
-            d = d + (', ' if d else '') + f'{k}: "{v}"'
-        if d:
-            d = f"{{{d}}}"
-
-        return f'{super().__str__()} {d}'
-
+_stopped = False
+_emitters = None
+_started = False
+_thread = None
+_queue = None
 
 class Task:
     _counter = 0
@@ -70,18 +59,16 @@ class Task:
         self.identifiers.update(kwargs)
 
     def event(self, evt, msg, timestamp=None, blob=None, **kwargs):
+        global _queue
         if not timestamp:
             timestamp = datetime.utcnow()
         event = Event(evt, self.component, self, msg, timestamp, blob, kwargs)
-        emit(event)
+        _queue.sync_q.put(event)
 
     def end(self, msg='', **kwargs):
         assert(not self.reported_end)
-        m = ''
-        if msg:
-            m = "Failed: {msg}" if self.failed else "Success: {msg}"
         self.reported_end = True
-        self.event(Event.END, m, **kwargs)
+        self.event(Event.END, msg, **kwargs)
         return None
 
     def success(self, msg='', **kwargs):
@@ -99,35 +86,44 @@ class Task:
     def info(self, msg, **kwargs):
         self.event(Event.INFO, msg, **kwargs)
 
-_queue = None
-async def _process():
-    global _queue
-    assert(_queue)
-    while True:
-        evt = await _queue.async_q.get()
-        _queue.async_q.task_done()
-        if not evt:
-            break
-        for e in _emitters:
-            e.emit(evt)
 
-main = None
-_emitters = None
-_started = False
-_thread = None
-def start(emitters=None):
-    async def _loop(ready: threading.Event):
+class Exception(Exception):
+    def __init__(self, msg='Exception',  **kwargs):
+        self.identifiers = kwargs
+        super().__init__(msg)
+
+    def __str__(self):
+        d = ', '.join([f'{k}: {v}' for (k, v) in self.identifiers.items()])
+        if d:
+            d = f" {{{d}}}"
+        return f'{super().__str__()}{d}'
+
+
+def _start(emitters=None):
+    async def _loop():
+        global _queue
+        global _emitters
+
+        while True:
+            evt = await _queue.async_q.get()
+            _queue.async_q.task_done()
+            if not evt:
+                break
+            for e in _emitters:
+                e.emit(evt)
+
+    async def _task(ready: threading.Event):
         global _queue
         _queue = janus.Queue()
         ready.set()
-        await _process()
+        await _loop()
         _queue.close()
         await _queue.wait_closed()
 
     def _run(ready):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(_loop(ready))
+        loop.run_until_complete(_task(ready))
 
     global _started
     if _started:
@@ -142,42 +138,22 @@ def start(emitters=None):
     _thread.start()
     ready.wait()
 
-    global main
-    main = Task(None, "main", is_component=True)
-
     _started = True
 
-_stopped = False
-def stop():
+def _stop():
+    global _started
     global _stopped
-    global main
     global _queue
     global _thread
+
+    if not _started:
+        raise Exception("Logberry never started")
 
     if _stopped:
         raise Exception("Logberry already stopped")
     _stopped = True
 
-    if main:
-        main.end()
-
     if _queue:
         _queue.sync_q.put(False)
 
     _thread.join()
-
-def emit(evt):
-    global _queue
-    _queue.sync_q.put(evt)
-
-
-if __name__ == "__main__":
-    start()
-    main.info("Logberry is functional")
-    t = main.task("Calculation")
-    u = t.task("Work", attachment="mushi.jpg")
-    u.success()
-    import time
-    time.sleep(2)
-    t.success()
-    stop()

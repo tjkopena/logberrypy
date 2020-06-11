@@ -1,7 +1,7 @@
 import asyncio
 import string
 
-from event import Event
+from .event import Event
 
 evt_labels = {
     Event.NOOP:  "NO-OP",
