@@ -71,14 +71,17 @@ class Printer():
             delim = ('[', ']')
         label_task = f"{event.task.label}{delim[0]}{idents}{delim[1]}"
 
-        label = f"{label_comp}{label_task}"
 
         eph = ', '.join([f'{k}: {v}' for (k, v) in event.ephemeral.items()])
 
         if not type:
             type = evt_labels[event.type]
 
+        text = f"{label_comp}{label_task}"
+
         if not msg:
             msg = event.msg
+        if msg:
+            text = text + ": " + msg
 
-        print(f"\r{tstamp} {type:5} {label:<42} {msg:<32} {id:<5} {eph}")
+        print(f"\r{tstamp} {type:5} {text:<80} {id:<5} {eph}")

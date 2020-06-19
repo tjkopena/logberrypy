@@ -1,16 +1,17 @@
-from .task import _start, _stop, Task, Exception
+from .task import Task, Exception
+from .threading import _start, _stop
 
 main = None
 
 def start():
     global main
-    task._start()
+    _start()
 
     main = Task(None, "main", is_component=True)
 
 def stop():
     global main
     main.end()
-    task._stop()
+    _stop()
 
 __all__ = ["start", "stop", "main", "Exception"]
