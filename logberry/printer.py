@@ -66,9 +66,11 @@ class Printer():
 
         label_task = ''
         idents = ', '.join([f'{k}: {v}' for (k, v) in event.task.identifiers.items()])
-        delim = ('(', ')')
+        delim = ('', '')
         if event.task.is_component:
             delim = ('[', ']')
+        elif event.task.is_func:
+            delim = ('(', ')')
         label_task = f"{event.task.label}{delim[0]}{idents}{delim[1]}"
 
 
@@ -85,3 +87,6 @@ class Printer():
             text = text + ": " + msg
 
         print(f"\r{tstamp} {type:5} {text:<80} {id:<5} {eph}")
+
+        if event.blob:
+            print(event.blob)

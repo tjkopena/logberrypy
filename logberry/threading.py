@@ -43,7 +43,7 @@ def _start(emitters=None):
     _emitters = emitters if emitters else [Printer()]
 
     ready = threading.Event()
-    _thread = threading.Thread(target=_run, args=[ready])
+    _thread = threading.Thread(target=_run, args=[ready], daemon=True)
     _thread.start()
     ready.wait()
 

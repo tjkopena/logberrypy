@@ -17,6 +17,7 @@ class Event:
         def __init__(self, task):
             self.id = task.id
             self.parent_id = task.parent.id if task.parent else None
+            self.is_func = task.is_func
             self.is_component = task.is_component
             self.label = task.label
             self.identifiers = deepcopy(task.identifiers)

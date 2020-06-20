@@ -11,13 +11,14 @@ import logberry._globals as _globals
 class Task:
     _counter = 0
 
-    def __init__(self, parent, label, is_component=False, **kwargs):
+    def __init__(self, parent, label, is_func=False, is_component=False, **kwargs):
         Task._counter += 1
         self.id = Task._counter
 
         self.failed = False
         self.reported_end = False
 
+        self.is_func = is_func
         self.is_component = is_component
 
         if self.is_component:
@@ -47,9 +48,11 @@ class Task:
         return Task(self, label, is_component=True, **kwargs)
 
     def task(self, label=None, **kwargs):
+        is_func = False
         if not label:
+            is_func = True
             label = inspect.stack()[1].function
-        return Task(self, label, **kwargs)
+        return Task(self, label, is_func=is_func, **kwargs)
 
     def attach(self, **kwargs):
         self.identifiers.update(kwargs)
@@ -71,12 +74,13 @@ class Task:
         self.end(msg, **kwargs)
         return None
 
-    def exception(self, msg='', ex=None, **kwargs):
+    def exception(self, ex, msg='', **kwargs):
         self.failed = True
-        if not msg:
-            msg = "Exception"
-        if ex:
-            msg = f"{msg}: {ex}"
+        text = f"{type(ex).__name__} {ex}"
+        if msg:
+            msg = f"{msg}: {text}"
+        else:
+            msg = f"{text}"
         self.end(msg, **kwargs)
         return ex
 
