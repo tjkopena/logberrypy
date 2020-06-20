@@ -31,12 +31,14 @@ class Printer():
             asyncio.get_event_loop().call_later(2, lambda: self.overdue(event))
             return
 
-        type = None
+        report_class = None
 
         begin = held_begins.pop(event.task.id, None)
         if begin:
             if event.type == Event.END:
-                type = "DONE"
+                if event.task.label.startswith('_') and not event.task.failed:
+                    return
+                report_class = "FAILED" if event.task.failed else "DONE"
                 event.ephemeral.update(begin.ephemeral)
                 parent = held_begins.pop(event.task.parent_id, None)
                 if parent:
@@ -44,7 +46,7 @@ class Printer():
             else:
                 self.recurse_begins(begin)
 
-        self.output(event, type=type)
+        self.output(event, report_class=report_class)
 
     def recurse_begins(self, event):
         begin = held_begins.pop(event.task.parent_id, None)
@@ -52,7 +54,7 @@ class Printer():
             self.recurse_begins(begin)
         self.output(event)
 
-    def output(self, event, type=None, msg=None):
+    def output(self, event, report_class=None, msg=None):
 
         tstamp = event.timestamp.isoformat(sep='T', timespec='milliseconds')
 
@@ -76,8 +78,8 @@ class Printer():
 
         eph = ', '.join([f'{k}: {v}' for (k, v) in event.ephemeral.items()])
 
-        if not type:
-            type = evt_labels[event.type]
+        if not report_class:
+            report_class = evt_labels[event.type]
 
         text = f"{label_comp}{label_task}"
 
@@ -86,7 +88,7 @@ class Printer():
         if msg:
             text = text + ": " + msg
 
-        print(f"\r{tstamp} {type:5} {text:<80} {id:<5} {eph}")
+        print(f"\r{tstamp} {report_class:5} {text:<80} {id:<5} {eph}")
 
         if event.blob:
             print(event.blob)
