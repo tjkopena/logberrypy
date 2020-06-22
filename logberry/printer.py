@@ -21,7 +21,7 @@ class Printer():
         parent = held_begins.pop(event.task.parent_id, None)
         if parent:
             self.recurse_begins(parent)
-        self.output(event, type="LATE", msg='Overdue' + (f": {event.msg}" if event.msg else ''))
+        self.output(event, report_class="LATE", msg='Overdue' + (f": {event.msg}" if event.msg else ''))
 
     def emit(self, event):
         assert(event.task)
