@@ -1,2 +1,4 @@
 
+main = None
+
 stopped = False

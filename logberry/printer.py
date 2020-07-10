@@ -1,5 +1,7 @@
 import asyncio
 import string
+import sys
+import shutil
 
 from .event import Event
 
@@ -7,13 +9,31 @@ evt_labels = {
     Event.NOOP:  "NO-OP",
     Event.BEGIN: "BEGIN",
     Event.END:   "END",
-    Event.ERROR: "ERROR",
     Event.INFO:  "INFO",
+    Event.ERROR: "ERROR",
+    Event.WARNING: "WARNING",
 }
 
 held_begins = {}
 
 class Printer():
+    def __init__(self, width=None, timespec=None):
+        self.tty = sys.stdout.isatty()
+
+        if width:
+            self.width = width
+        elif self.tty:
+            self.width = shutil.get_terminal_size().columns
+        else:
+            self.width = 128
+
+        if timespec:
+            self.timespec = timespec
+        elif self.tty and self.width < 128:
+            self.timespec = "%H:%m:%S.%f"
+        else:
+            self.timespec = "%Y%m%dT%H:%M:%S.%f"
+
     def overdue(self, event):
         event = held_begins.pop(event.task.id, None)
         if not event:
@@ -26,7 +46,7 @@ class Printer():
     def emit(self, event):
         assert(event.task)
 
-        if event.type == Event.BEGIN:
+        if event.code == Event.BEGIN:
             held_begins[event.task.id] = event
             asyncio.get_event_loop().call_later(2, lambda: self.overdue(event))
             return
@@ -35,7 +55,7 @@ class Printer():
 
         begin = held_begins.pop(event.task.id, None)
         if begin:
-            if event.type == Event.END:
+            if event.code == Event.END:
                 if event.task.label.startswith('_') and not event.task.failed:
                     return
                 report_class = "FAILED" if event.task.failed else "DONE"
@@ -56,7 +76,7 @@ class Printer():
 
     def output(self, event, report_class=None, msg=None):
 
-        tstamp = event.timestamp.isoformat(sep='T', timespec='milliseconds')
+        tstamp = event.timestamp.strftime(self.timespec)
 
         id_parent = f":{event.task.parent_id}" if event.task.parent_id else ''
         id = f"{event.task.id}{id_parent}"
@@ -64,31 +84,39 @@ class Printer():
         label_comp = ''
         if event.component:
             idents = ', '.join([f'{k}: {v}' for (k, v) in event.component.identifiers.items()])
-            label_comp = f"{event.component.label}[{idents}]::"
+            label_comp = f"{event.component.label}" + (f"[{idents}]" if idents else '') + '::'
 
         label_task = ''
         idents = ', '.join([f'{k}: {v}' for (k, v) in event.task.identifiers.items()])
         delim = ('', '')
         if event.task.is_component:
-            delim = ('[', ']')
+            if idents:
+                delim =  ('[', ']')
         elif event.task.is_func:
             delim = ('(', ')')
+        elif idents:
+            delim = (' {', '}')
         label_task = f"{event.task.label}{delim[0]}{idents}{delim[1]}"
 
 
         eph = ', '.join([f'{k}: {v}' for (k, v) in event.ephemeral.items()])
 
         if not report_class:
-            report_class = evt_labels[event.type]
+            report_class = evt_labels[event.code]
 
         text = f"{label_comp}{label_task}"
 
         if not msg:
             msg = event.msg
         if msg:
-            text = text + ": " + msg
+            text = text + " " + msg
 
-        print(f"\r{tstamp} {report_class:5} {text:<80} {id:<5} {eph}")
+        clear = "\r" if self.tty else ''
+        w = self.width - (len(tstamp)+1+8+6+32)
+        print(f"{clear}{tstamp} {report_class:7} {text:<{w}} {id:<5} {eph}")
 
-        if event.blob:
-            print(event.blob)
+        if event.text:
+            print(event.text)
+
+        if event.binary:
+            print(F"<binary data {len(event.binary)} bytes>")

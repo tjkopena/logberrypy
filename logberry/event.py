@@ -1,11 +1,12 @@
 from copy import deepcopy
 
 class Event:
-    NOOP  = 0
-    BEGIN = 1
-    END   = 2
-    ERROR = 3
-    INFO  = 4
+    NOOP    = 0
+    BEGIN   = 1
+    END     = 2
+    INFO    = 3
+    ERROR   = 4
+    WARNING = 5
 
     class Component:
         def __init__(self, component):
@@ -23,11 +24,12 @@ class Event:
             self.identifiers = deepcopy(task.identifiers)
             self.failed = task.failed
 
-    def __init__(self, type, component, task, msg, timestamp, blob, ephemeral):
-        self.type = type
+    def __init__(self, code, component, task, msg, timestamp, text, binary, ephemeral):
+        self.code = code
         self.component = Event.Component(component) if component else None
         self.task = Event.Task(task)
         self.msg = msg
         self.timestamp = timestamp
         self.ephemeral = deepcopy(ephemeral)
-        self.blob = deepcopy(blob)
+        self.text = deepcopy(text)
+        self.binary = deepcopy(binary)
