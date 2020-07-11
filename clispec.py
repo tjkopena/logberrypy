@@ -13,12 +13,19 @@ import shutil
 parser = argparse.ArgumentParser(description='Command Line Spec Test')
 parser.add_argument('file', type=str, help="name of test specification file")
 parser.add_argument('--save_scr', action='store_true', default=False, help='save the temporary script file')
-parser.add_argument('--noout', action='store_true', default=False, help='do not show script output')
+parser.add_argument('-q', '--quiet', action='store_true', default=False, help='only report success or error(s)')
+parser.add_argument('-o', '--output', action='store_true', default=False, help='show script output even on success')
+parser.add_argument('--noout', action='store_true', default=False, help='don\'t show script output even on error')
 parser.add_argument('--nolines', action='store_true', default=False, help='do not include line numbers on script output')
-parser.add_argument('--save_out', action='store_true', default=False, help='write script output to file')
+parser.add_argument('-s', '--save_out', action='store_true', default=False, help='write script output to file')
 parser.add_argument('--maxerr', type=int, default=8, help="maximum number of errors to display; -1 for all")
 args = parser.parse_args()
 
+_print = print
+if args.quiet:
+    def noprint(*args, **kwargs):
+        pass
+    print = noprint
 print(f"Testing {args.file}")
 suffix = ''.join(pathlib.Path(args.file).suffixes)
 
@@ -95,15 +102,17 @@ for i in range(min(len(expressions), len(output))):
         if width and (len('        Received: ')+len(l)) > width:
             l = l[:width-(len('        Received: ')+3)] + '...'
         errors.append(f"Mismatch on line {i+1}\n"
-                      f"        Expected: /{expressions[i]}/\n"
+                      f"        Expected: {expressions[i]}\n"
                       f"        Received: {l}")
 
 outcome = 0
 if not errors:
-    print("\nSUCCESS")
+    print()
+    _print("SUCCESS")
 else:
     outcome = -1
-    print(f"\nERRORS ({len(errors)})")
+    print()
+    _print(f"ERRORS ({len(errors)})")
     n = min(len(errors), args.maxerr) if args.maxerr >= 0 else len(errors)
     for i,e in enumerate(errors[:n]):
         print(f"  {i:2}: " + e)
@@ -111,7 +120,7 @@ else:
     if args.maxerr > 0 and n != len(errors):
         print("  Too many errors, stopping...")
 
-if not args.noout:
+if not args.quiet and (args.output or (len(errors) and not args.noout)):
     print("\nOUTPUT")
     for i,l in enumerate(output):
         print('' if args.nolines else f"{i+1:4}:", f"{l}")
