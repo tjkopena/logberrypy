@@ -2,6 +2,7 @@ from .task import Task, Exception
 from .background import _start, _stop
 from .wrapper import wrap, log
 import logberry._globals as _globals
+from .printer import Printer
 
 def start(**kwargs):
     if _globals.main:
@@ -51,4 +52,4 @@ def error(*args, **kwargs):
 def warning(*args, **kwargs):
     return log().warning(*args, **kwargs)
 
-__all__ = ['start', 'stop', 'Exception', 'wrap', 'log', 'main', 'attach', 'component', 'task', 'end', 'end_success', 'end_exception', 'end_failure', 'info', 'exception', 'error', 'warning']
+__all__ = ['start', 'stop', 'Exception', 'Printer', 'wrap', 'log', 'main', 'attach', 'component', 'task', 'end', 'end_success', 'end_exception', 'end_failure', 'info', 'exception', 'error', 'warning']
