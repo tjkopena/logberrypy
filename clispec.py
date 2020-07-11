@@ -13,9 +13,9 @@ import shutil
 parser = argparse.ArgumentParser(description='Command Line Spec Test')
 parser.add_argument('file', type=str, help="name of test specification file")
 parser.add_argument('--save_scr', action='store_true', default=False, help='save the temporary script file')
-parser.add_argument('--output', action='store_true', default=False, help='show script output')
-parser.add_argument('--nolines', action='store_true', default=False, help='do not include line numbers on output')
-parser.add_argument('--save_out', action='store_true', default=False, help='write output to file')
+parser.add_argument('--noout', action='store_true', default=False, help='do not show script output')
+parser.add_argument('--nolines', action='store_true', default=False, help='do not include line numbers on script output')
+parser.add_argument('--save_out', action='store_true', default=False, help='write script output to file')
 parser.add_argument('--maxerr', type=int, default=8, help="maximum number of errors to display; -1 for all")
 args = parser.parse_args()
 
@@ -43,8 +43,9 @@ with open(args.file, 'r') as fp:
             if l.lower().startswith('## retcode'):
                 l = l[len('## retcode'):]
                 exp_retcode = int(l.strip())
-
         else:
+            if l.startswith('#'):
+                l = l[1:]
             expressions.append(l)
 
         l = fp.readline().strip()
@@ -94,7 +95,7 @@ for i in range(min(len(expressions), len(output))):
         if width and (len('        Received: ')+len(l)) > width:
             l = l[:width-(len('        Received: ')+3)] + '...'
         errors.append(f"Mismatch on line {i+1}\n"
-                      f"        Expected: {expressions[i]}\n"
+                      f"        Expected: /{expressions[i]}/\n"
                       f"        Received: {l}")
 
 outcome = 0
@@ -110,7 +111,7 @@ else:
     if args.maxerr > 0 and n != len(errors):
         print("  Too many errors, stopping...")
 
-if args.output:
+if not args.noout:
     print("\nOUTPUT")
     for i,l in enumerate(output):
         print('' if args.nolines else f"{i+1:4}:", f"{l}")
