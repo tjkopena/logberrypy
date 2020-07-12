@@ -46,10 +46,17 @@ class Printer():
             self.recurse_begins(parent)
         self.output(event, report_class="LATE", msg='Overdue' + (f": {event.msg}" if event.msg else ''))
 
+    def params_text(params):
+        def q(v):
+            if isinstance(v, str):
+                v = '"' + v + '"'
+            return v
+        return ', '.join([f'{k}: {q(v)}' for (k, v) in params.items()])
+
     def emit(self, event):
         assert(event.task)
 
-        if event.code == Event.BEGIN:
+        if not event.task.is_component and event.code == Event.BEGIN:
             held_begins[event.task.id] = event
             asyncio.get_event_loop().call_later(2, lambda: self.overdue(event))
             return
@@ -75,9 +82,9 @@ class Printer():
         begin = held_begins.pop(event.task.parent_id, None)
         if begin:
             self.recurse_begins(begin)
-        self.output(event)
+        self.output(event, maybelate=False)
 
-    def output(self, event, report_class=None, msg=None):
+    def output(self, event, report_class=None, msg=None, maybelate=True):
 
         tstamp = (event.timestamp.strftime(self.timespec) + " ") if self.timespec else ""
 
@@ -86,11 +93,11 @@ class Printer():
 
         label_comp = ''
         if event.component:
-            idents = ', '.join([f'{k}: {v}' for (k, v) in event.component.identifiers.items()])
+            idents = Printer.params_text(event.component.identifiers)
             label_comp = f"{event.component.label}" + (f"[{idents}]" if idents else '') + '::'
 
         label_task = ''
-        idents = ', '.join([f'{k}: {v}' for (k, v) in event.task.identifiers.items()])
+        idents = Printer.params_text(event.task.identifiers)
         delim = ('', '')
         if event.task.is_component:
             if idents:
@@ -102,7 +109,7 @@ class Printer():
         label_task = f"{event.task.label}{delim[0]}{idents}{delim[1]}"
 
 
-        eph = ', '.join([f'{k}: {v}' for (k, v) in event.ephemeral.items()])
+        eph = Printer.params_text(event.ephemeral)
 
         if not report_class:
             report_class = evt_labels[event.code]
@@ -112,7 +119,10 @@ class Printer():
         if not msg:
             msg = event.msg
         if msg:
-            text = text + " " + msg
+            msgsep = ' '
+            if not event.task.is_func and not event.task.is_component:
+                msgsep = ' - '
+            text = text + msgsep + msg
 
         clear = "\r" if self.tty else ''
         w = self.width - (len(tstamp)+1+8+6+32)

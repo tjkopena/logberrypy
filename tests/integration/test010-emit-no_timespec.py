@@ -6,4 +6,5 @@ logberry.start(emitters=[logberry.Printer(timespec=None)])
 logberry.stop()
 
 ## SPEC
-#DONE\s+main\s+1\s+
+#BEGIN\s+main\s+1\s*
+#END\s+main\s+1\s*

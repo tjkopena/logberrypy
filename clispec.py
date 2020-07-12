@@ -98,12 +98,9 @@ if sys.stdout.isatty():
 for i in range(min(len(expressions), len(output))):
     m = re.match(expressions[i], output[i])
     if not m:
-        l = output[i]
-        if width and (len('        Received: ')+len(l)) > width:
-            l = l[:width-(len('        Received: ')+3)] + '...'
         errors.append(f"Mismatch on line {i+1}\n"
                       f"        Expected: {expressions[i]}\n"
-                      f"        Received: {l}")
+                      f"        Received: {output[i]}")
 
 outcome = 0
 if not errors:
