@@ -27,15 +27,23 @@ def _pop():
 
 def _wrap_class(cls, label=None, **wrapargs):
     ini = getattr(cls, '__init__', None)
+    dl = getattr(cls, '__del__', None)
 
     def newinit(self, *args, **kwargs):
         setattr(self, 'log', _globals.main.component(cls.__name__))
-        ini(self, *args, **kwargs)
+        if ini:
+            ini(self, *args, **kwargs)
+
+    def newdel(self, *args, **kwargs):
+        if dl:
+            dl(self, *args, **kwargs)
+        self.log.end()
 
     setattr(cls, '__init__', newinit)
+    setattr(cls, '__del__', newdel)
     return cls
 
-def _wrap_func(func, label=None, **wrapargs):
+def _wrap_func(func, label=None, hide=[], **wrapargs):
 
     desc = next((desc for desc in (staticmethod, classmethod) if isinstance(func, desc)), None)
     if desc:
@@ -44,6 +52,7 @@ def _wrap_func(func, label=None, **wrapargs):
     def decorator(func):
         is_func = False if label else True
         newlabel = label if label else func.__name__
+        hideset = { i for i in (hide if isinstance(hide, list) else ([hide] if hide else None))}
 
         @wraps(func)
         def inner(*args, log=None, **kwargs):
@@ -61,10 +70,20 @@ def _wrap_func(func, label=None, **wrapargs):
                     else:
                         log = _log()
 
-                t = log.task(newlabel, is_func=is_func, **kwargs)
+                sig = inspect.signature(func)
+
+                binding = sig.bind_partial(*nonselfargs, **kwargs)
+                binding.apply_defaults()
+                exargs = {k: v for k,v in binding.arguments.items() if k not in hideset }
+
+                if 'log' in exargs:
+                    del exargs['log']
+                if 'self' in exargs:
+                    del exargs['self']
+
+                t = log.task(newlabel, is_func=is_func, **exargs)
                 _push(t)
 
-                sig = inspect.signature(func)
                 if 'log' in sig.parameters:
                     kwargs['log'] = t
 

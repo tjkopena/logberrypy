@@ -32,7 +32,7 @@ class Task:
         self.is_component = is_component
 
         self.identifiers = kwargs
-        ephemeral = {}
+        self.reports = {}
 
         self.parent = parent
         while parent and not parent.is_component:
@@ -41,7 +41,7 @@ class Task:
 
         self.label = label if label else "Task"
 
-        self.event(Event.BEGIN, '', **ephemeral)
+        self.event(Event.BEGIN, '')
 
     def __del__(self):
         if self.reported_end:
@@ -62,10 +62,30 @@ class Task:
     def attach(self, **kwargs):
         self.identifiers.update(kwargs)
 
+    def detach(self, **kwargs):
+        if kwargs:
+            for k in kwargs:
+                if k in self.identifiers:
+                    del self.identifiers[k]
+        else:
+            self.identifiers.clear()
+
+    def report(self, **kwargs):
+        self.reports.update(kwargs)
+
+    def retract(self, **kwargs):
+        if kwargs:
+            for k in kwargs:
+                if k in self.reports:
+                    del self.reports[k]
+        else:
+            self.reports.clear()
+
     def event(self, evt, msg, timestamp=None, text=None, binary=None, **kwargs):
         if not timestamp:
             timestamp = datetime.utcnow()
-        event = Event(evt, self.containing_component, self, msg, timestamp, text, binary, kwargs)
+        args = { **self.reports, **kwargs }
+        event = Event(evt, self.containing_component, self, msg, timestamp, text, binary, args)
         queue_put(event)
 
 

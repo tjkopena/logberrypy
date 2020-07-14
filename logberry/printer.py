@@ -51,7 +51,7 @@ class Printer():
             if isinstance(v, str):
                 v = '"' + v + '"'
             return v
-        return ', '.join([f'{k}: {q(v)}' for (k, v) in params.items()])
+        return ', '.join([f'{k}: {q(v)}' for (k, v) in params.items() if not k.startswith('_')])
 
     def emit(self, event):
         assert(event.task)

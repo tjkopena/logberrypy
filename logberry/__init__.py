@@ -22,6 +22,15 @@ def main():
 def attach(**kwargs):
     return log().attach(**kwargs)
 
+def detach(**kwargs):
+    return log().detach(**kwargs)
+
+def report(**kwargs):
+    return log().report(**kwargs)
+
+def retract(**kwargs):
+    return log().retract(**kwargs)
+
 def component(*args, **kwargs):
     return log().component(*args, **kwargs)
 

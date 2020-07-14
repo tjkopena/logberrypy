@@ -1,5 +1,7 @@
 import janus
 
+import logberry._globals as _globals
+
 _queue = None
 
 def queue_create():
@@ -8,6 +10,8 @@ def queue_create():
 
 def queue_put(event):
     global _queue
+    if _globals.stopped:
+        return
     _queue.sync_q.put(event)
 
 async def queue_get():
