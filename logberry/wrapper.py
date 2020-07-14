@@ -65,7 +65,7 @@ def _wrap_func(func, label=None, hide=[], **wrapargs):
         newlabel = label if label else func.__name__
 
         newhide = hide
-        hideset = {}
+        hideset = set()
         if newhide:
             if newhide == '*':
                 hideset = { k for k in sig.parameters }

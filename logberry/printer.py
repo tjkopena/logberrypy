@@ -3,6 +3,7 @@ import string
 import sys
 import shutil
 
+from .utils import params_text
 from .event import Event
 
 evt_labels = {
@@ -46,13 +47,6 @@ class Printer():
             self.recurse_begins(parent)
         self.output(event, report_class="LATE", msg='Overdue' + (f": {event.msg}" if event.msg else ''))
 
-    def params_text(params):
-        def q(v):
-            if isinstance(v, str):
-                v = '"' + v + '"'
-            return v
-        return ', '.join([f'{k}: {q(v)}' for (k, v) in params.items() if not k.startswith('_')])
-
     def emit(self, event):
         assert(event.task)
 
@@ -82,9 +76,9 @@ class Printer():
         begin = held_begins.pop(event.task.parent_id, None)
         if begin:
             self.recurse_begins(begin)
-        self.output(event, maybelate=False)
+        self.output(event)
 
-    def output(self, event, report_class=None, msg=None, maybelate=True):
+    def output(self, event, report_class=None, msg=None):
 
         tstamp = (event.timestamp.strftime(self.timespec) + " ") if self.timespec else ""
 
@@ -93,11 +87,11 @@ class Printer():
 
         label_comp = ''
         if event.component:
-            idents = Printer.params_text(event.component.identifiers)
+            idents = params_text(event.component.identifiers)
             label_comp = f"{event.component.label}" + (f"[{idents}]" if idents else '') + '::'
 
         label_task = ''
-        idents = Printer.params_text(event.task.identifiers)
+        idents = params_text(event.task.identifiers)
         delim = ('', '')
         if event.task.is_component:
             if idents:
@@ -107,9 +101,6 @@ class Printer():
         elif idents:
             delim = (' {', '}')
         label_task = f"{event.task.label}{delim[0]}{idents}{delim[1]}"
-
-
-        eph = Printer.params_text(event.ephemeral)
 
         if not report_class:
             report_class = evt_labels[event.code]
@@ -124,12 +115,18 @@ class Printer():
                 msgsep = ' - '
             text = text + msgsep + msg
 
+        eph = event.ephemeral.copy()
+        blob_text = eph.pop('text', None)
+        blob_binary = eph.pop('binary', None)
+        eph = params_text(eph)
+        blob = f"{' ' if eph else ''}{'>>' if blob_text or blob_binary else ''}"
+
         clear = "\r" if self.tty else ''
         w = self.width - (len(tstamp)+1+8+6+32)
-        print(f"{clear}{tstamp}{report_class:7} {text:<{w}} {id:<5} {eph}")
+        print(f"{clear}{tstamp}{report_class:7} {text:<{w}} {id:<5} {eph}{blob}")
 
-        if event.text:
-            print(event.text)
+        if blob_text:
+            print(f"{clear}{blob_text}")
 
-        if event.binary:
-            print(F"<binary data {len(event.binary)} bytes>")
+        if blob_binary:
+            print(f"{clear}<binary data {len(blob_binary)} bytes>")

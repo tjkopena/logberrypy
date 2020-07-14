@@ -3,6 +3,7 @@ from datetime import datetime
 import string
 import asyncio
 
+from .utils import params_text
 from .event import Event
 from .queue import queue_put
 import logberry._globals as _globals
@@ -13,7 +14,7 @@ class Exception(Exception):
         super().__init__(msg)
 
     def __str__(self):
-        d = ', '.join([f'{k}: {v}' for (k, v) in self.identifiers.items()])
+        d = params_text(self.identifiers)
         if d:
             d = f" {{{d}}}"
         return f'{super().__str__()}{d}'
@@ -81,11 +82,11 @@ class Task:
         else:
             self.reports.clear()
 
-    def event(self, evt, msg, timestamp=None, text=None, binary=None, **kwargs):
+    def event(self, evt, msg, timestamp=None, **kwargs):
         if not timestamp:
             timestamp = datetime.utcnow()
         args = { **self.reports, **kwargs }
-        event = Event(evt, self.containing_component, self, msg, timestamp, text, binary, args)
+        event = Event(evt, self.containing_component, self, msg, timestamp, args)
         queue_put(event)
 
 
@@ -112,7 +113,10 @@ class Task:
 
     def end_exception(self, ex, msg='', **kwargs):
         self.failed = True
-        text = f"{type(ex).__name__} {ex}"
+        ex_str = str(ex)
+        type_str = type(ex).__name__
+        type_str = '' if ex_str.startswith(type_str) else (type_str + ' ')
+        text = f"{type_str}{ex_str}"
         if msg:
             msg = f"{msg}: {text}"
         else:
