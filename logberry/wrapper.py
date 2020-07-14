@@ -7,6 +7,9 @@ from contextlib import contextmanager
 
 import logberry._globals as _globals
 
+_hide = {}
+hide = _hide
+
 context = contextvars.ContextVar('task context')
 
 def _log():
@@ -50,9 +53,16 @@ def _wrap_func(func, label=None, hide=[], **wrapargs):
         func = func.__func__
 
     def decorator(func):
+
         is_func = False if label else True
         newlabel = label if label else func.__name__
+
         hideset = { i for i in (hide if isinstance(hide, list) else ([hide] if hide else None))}
+
+        sig = inspect.signature(func)
+        for k, v in sig.parameters.items():
+            if v.annotation is _hide:
+                hideset.add(k)
 
         @wraps(func)
         def inner(*args, log=None, **kwargs):
@@ -70,16 +80,13 @@ def _wrap_func(func, label=None, hide=[], **wrapargs):
                     else:
                         log = _log()
 
-                sig = inspect.signature(func)
-
                 binding = sig.bind_partial(*nonselfargs, **kwargs)
                 binding.apply_defaults()
-                exargs = {k: v for k,v in binding.arguments.items() if k not in hideset }
+                exargs = { k: v for k,v in binding.arguments.items() if k not in hideset }
 
-                if 'log' in exargs:
-                    del exargs['log']
-                if 'self' in exargs:
-                    del exargs['self']
+                for k in ['log', 'self']:
+                    if k in exargs:
+                        del exargs[k]
 
                 t = log.task(newlabel, is_func=is_func, **exargs)
                 _push(t)
