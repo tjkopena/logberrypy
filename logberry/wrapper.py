@@ -10,6 +10,9 @@ import logberry._globals as _globals
 _hide = {}
 hide = _hide
 
+_show = {}
+show = _show
+
 context = contextvars.ContextVar('task context')
 
 def _log():
@@ -53,16 +56,29 @@ def _wrap_func(func, label=None, hide=[], **wrapargs):
         func = func.__func__
 
     def decorator(func):
+        global _hide
+        global _show
+
+        sig = inspect.signature(func)
 
         is_func = False if label else True
         newlabel = label if label else func.__name__
 
-        hideset = { i for i in (hide if isinstance(hide, list) else ([hide] if hide else None))}
+        newhide = hide
+        hideset = {}
+        if newhide:
+            if newhide == '*':
+                hideset = { k for k in sig.parameters }
+            else:
+                if not isinstance(newhide, list):
+                    newhide = [ newhide ]
+                hideset = { k for k in newhide }
 
-        sig = inspect.signature(func)
-        for k, v in sig.parameters.items():
-            if v.annotation is _hide:
-                hideset.add(k)
+        for p in sig.parameters.values():
+            if p.annotation is _hide:
+                hideset.add(p.name)
+            elif p.annotation is _show:
+                hideset.discard(p.name)
 
         @wraps(func)
         def inner(*args, log=None, **kwargs):
