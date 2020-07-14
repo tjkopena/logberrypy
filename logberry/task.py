@@ -9,7 +9,8 @@ from .queue import queue_put
 import logberry._globals as _globals
 
 class Exception(Exception):
-    def __init__(self, msg='Exception',  **kwargs):
+    def __init__(self, msg='',  **kwargs):
+        self.msg = msg
         self.identifiers = kwargs
         super().__init__(msg)
 
@@ -17,7 +18,15 @@ class Exception(Exception):
         d = params_text(self.identifiers)
         if d:
             d = f" {{{d}}}"
-        return f'{super().__str__()}{d}'
+        msg = (': ' if self.msg else '') + self.msg
+        return f'{self.text()}{d}'
+
+    def text(self):
+        msg = (': ' if self.msg else '') + self.msg
+        return f'{type(self).__name__}{msg}'
+
+    def data(self):
+        return self.identifiers
 
 class Task:
     _counter = 0
@@ -113,14 +122,15 @@ class Task:
 
     def end_exception(self, ex, msg='', **kwargs):
         self.failed = True
-        ex_str = str(ex)
-        type_str = type(ex).__name__
-        type_str = '' if ex_str.startswith(type_str) else (type_str + ' ')
-        text = f"{type_str}{ex_str}"
-        if msg:
-            msg = f"{msg}: {text}"
+        if isinstance(ex, Exception):
+            msg = f'{msg}: {ex.text()}' if msg else ex.text()
+            kwargs.update(ex.data())
         else:
-            msg = f"{text}"
+            ex_str = str(ex)
+            type_str = type(ex).__name__
+            type_str = '' if ex_str.startswith(type_str) else (type_str + ': ')
+            text = f"{type_str}{ex_str}"
+            msg = f"{msg}: {text}" if msg else text
         self.end(msg, **kwargs)
         return ex
 
