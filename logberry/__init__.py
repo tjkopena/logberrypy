@@ -1,4 +1,5 @@
-from .task import Task, Exception
+from .task import Task
+from .exception import Exception, HTTPException
 from .background import _start, _stop
 from .wrapper import wrap, log, hide, show
 import logberry._globals as _globals
@@ -62,7 +63,7 @@ def warning(*args, **kwargs):
     return log().warning(*args, **kwargs)
 
 __all__ = ['start', 'stop',
-           'Exception',
+           'Exception', 'HTTPException',
            'Printer',
            'wrap', 'hide', 'show',
            'log', 'main',

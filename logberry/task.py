@@ -3,30 +3,11 @@ from datetime import datetime
 import string
 import asyncio
 
+from .exception import Exception, _exception_label
 from .utils import params_text
 from .event import Event
 from .queue import queue_put
 import logberry._globals as _globals
-
-class Exception(Exception):
-    def __init__(self, msg='',  **kwargs):
-        self.msg = msg
-        self.identifiers = kwargs
-        super().__init__(msg)
-
-    def __str__(self):
-        d = params_text(self.identifiers)
-        if d:
-            d = f" {{{d}}}"
-        msg = (': ' if self.msg else '') + self.msg
-        return f'{self.text()}{d}'
-
-    def text(self):
-        msg = (': ' if self.msg else '') + self.msg
-        return f'{type(self).__name__}{msg}'
-
-    def data(self):
-        return self.identifiers
 
 class Task:
     _counter = 0
@@ -122,15 +103,7 @@ class Task:
 
     def end_exception(self, ex, msg='', **kwargs):
         self.failed = True
-        if isinstance(ex, Exception):
-            msg = f'{msg}: {ex.text()}' if msg else ex.text()
-            kwargs.update(ex.data())
-        else:
-            ex_str = str(ex)
-            type_str = type(ex).__name__
-            type_str = '' if ex_str.startswith(type_str) else (type_str + ': ')
-            text = f"{type_str}{ex_str}"
-            msg = f"{msg}: {text}" if msg else text
+        msg = _exception_label(ex, msg, kwargs)
         self.end(msg, **kwargs)
         return ex
 
@@ -148,8 +121,7 @@ class Task:
         self.event(Event.INFO, msg, **kwargs)
 
     def exception(self, ex, msg='', **kwargs):
-        label = f"{type(ex).__name__} {ex}"
-        msg = f"{msg}: {label}" if msg else f"{label}"
+        msg = _exception_label(ex, msg, kwargs)
         self.event(Event.ERROR, msg, **kwargs)
 
     def error(self, msg, **kwargs):
