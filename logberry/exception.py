@@ -22,7 +22,6 @@ class Exception(Exception):
         d = params_text(self.identifiers)
         if d:
             d = f" {{{d}}}"
-        msg = (': ' if self.msg else '') + self.msg
         return f'{self.msg}{d}'
 
     def text(self):
