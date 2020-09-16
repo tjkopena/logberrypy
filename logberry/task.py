@@ -17,7 +17,6 @@ class Task:
         self.id = Task._counter
 
         self.failed = False
-        self.reported_end = False
 
         self.is_func = is_func
         self.is_component = is_component
@@ -31,6 +30,9 @@ class Task:
         self.containing_component = parent
 
         self.label = label if label else "Task"
+
+        self.reported_end = False  # Python specific, used to report end of the task
+                                   # in __del__ if it not already reported as ended
 
         self.event(Event.BEGIN, '')
 
@@ -78,6 +80,7 @@ class Task:
         args = { **self.reports, **kwargs }
         event = Event(evt, self.containing_component, self, msg, timestamp, args)
         queue_put(event)
+        self.reports.clear()
 
 
     def component(self, label, **kwargs):
