@@ -120,6 +120,9 @@ else:
 if not args.quiet and (args.output or (len(errors) and not args.noout)):
     print("\nOUTPUT")
     for i,l in enumerate(output):
-        print('' if args.nolines else f"{i+1:4}:", f"{l}")
+        if args.nolines:
+            print(l)
+        else:
+            print(f"{i+1:3}:", l)
 
 exit(outcome)
