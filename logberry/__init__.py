@@ -2,8 +2,9 @@ from .task import Task
 from .exception import Exception, HTTPException
 from .background import _start, _stop
 from .wrapper import wrap, log, hide, show
-import logberry._globals as _globals
 from .printer import Printer
+from .json import JSONOutput
+import logberry._globals as _globals
 
 def start(**kwargs):
     if _globals.main:
@@ -64,7 +65,7 @@ def warning(*args, **kwargs):
 
 __all__ = ['start', 'stop',
            'Exception', 'HTTPException',
-           'Printer',
+           'Printer', 'JSONOutput',
            'wrap', 'hide', 'show',
            'log', 'main',
            'component', 'task',
