@@ -96,7 +96,7 @@ def _wrap_func(func, label=None, hide=[], **wrapargs):
                     else:
                         log = _log()
 
-                binding = sig.bind_partial(*nonselfargs, **kwargs)
+                binding = sig.bind(*args, **kwargs)
                 binding.apply_defaults()
                 exargs = { k: v for k,v in binding.arguments.items() if k not in hideset }
 
