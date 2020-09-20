@@ -3,7 +3,6 @@ from .exception import Exception, HTTPException
 from .background import _start, _stop
 from .wrapper import wrap, log, hide, show
 from .printer import Printer
-from .json import JSONOutput
 import logberry._globals as _globals
 
 def start(**kwargs):
